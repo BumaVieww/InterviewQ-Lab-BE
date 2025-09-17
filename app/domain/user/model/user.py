@@ -1,12 +1,11 @@
-from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy import Column, BigInteger, String, Boolean
 from core.database import Base
 
 class User(Base):
     __tablename__ = "user"
 
-    user_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    clerk_id = Column(String(255), unique=True, nullable=False, index=True)
-    nickname = Column(String(100), nullable=False)
-    email = Column(String(255), unique=True, nullable=False, index=True)
+    user_id = Column(BigInteger, primary_key=True)
+    nickname = Column(String(100))
+    email = Column(String(255))
     role = Column(String(30))
-    is_onboarding = Column(Boolean, default=False)
+    is_onboarding = Column(Boolean)
