@@ -1,12 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, selectinload
 from core.database import get_db
+from core.auth import get_current_user
 from core.pagination import paginate_cursor
 from api.schemas.question import QuestionResponse, QuestionCreateRequest, QuestionUpdateRequest
 from api.schemas.answer import AnswerResponse, AnswerCreateRequest
 from api.schemas.base import BaseResponse, CursorPage
 from app.domain.question.model.question import Question
 from app.domain.question.model.answer import Answer
+from app.domain.user.model.user import User
 from typing import Optional
 
 router = APIRouter(prefix="/questions", tags=["questions"])
@@ -14,11 +16,11 @@ router = APIRouter(prefix="/questions", tags=["questions"])
 @router.post("/", response_model=BaseResponse)
 async def create_question(
     question_request: QuestionCreateRequest,
-    user_id: int = 1,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     db_question = Question(
-        registrant_id=user_id,
+        registrant_id=current_user.user_id,
         question=question_request.question,
         category=question_request.category,
         company_id=question_request.company_id,
@@ -49,14 +51,14 @@ async def get_question(question_id: int, db: Session = Depends(get_db)):
 async def update_question(
     question_id: int,
     question_request: QuestionUpdateRequest,
-    user_id: int = 1,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     question = db.query(Question).filter(Question.question_id == question_id).first()
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
 
-    if question.registrant_id != user_id:
+    if question.registrant_id != current_user.user_id:
         raise HTTPException(status_code=403, detail="Not authorized to update this question")
 
     question.question = question_request.question
@@ -68,14 +70,14 @@ async def update_question(
 @router.delete("/{question_id}", response_model=BaseResponse)
 async def delete_question(
     question_id: int,
-    user_id: int = 1,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     question = db.query(Question).filter(Question.question_id == question_id).first()
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
 
-    if question.registrant_id != user_id:
+    if question.registrant_id != current_user.user_id:
         raise HTTPException(status_code=403, detail="Not authorized to delete this question")
 
     db.delete(question)
@@ -86,7 +88,7 @@ async def delete_question(
 async def create_answer(
     question_id: int,
     answer_request: AnswerCreateRequest,
-    user_id: int = 1,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     question = db.query(Question).filter(Question.question_id == question_id).first()
@@ -95,7 +97,7 @@ async def create_answer(
 
     db_answer = Answer(
         question_id=question_id,
-        respondent_id=user_id,
+        user_id=current_user.user_id,
         answer=answer_request.answer
     )
     db.add(db_answer)

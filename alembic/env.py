@@ -20,6 +20,8 @@ from core.database import Base
 from app.domain.user.model.user import User
 from app.domain.company.model.company import Company
 from app.domain.company.model.position import Position
+from app.domain.company.model.company_analyze import CompanyAnalyze
+from app.domain.company.model.keywords_by_position import KeywordsByPosition
 from app.domain.question.model.question import Question
 from app.domain.question.model.answer import Answer
 from app.domain.question.model.answer_comment import AnswerComment

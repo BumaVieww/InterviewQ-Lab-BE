@@ -1,15 +1,15 @@
 from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime
+from datetime import date
 
 class QuestionResponse(BaseModel):
     question_id: int
+    company_id: int
     registrant_id: int
     question: str
     category: str
-    company_id: int
     tag: str
-    question_at: datetime
+    question_at: date
 
     class Config:
         from_attributes = True
