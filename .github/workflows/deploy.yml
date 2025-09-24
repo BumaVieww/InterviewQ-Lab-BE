@@ -1,0 +1,58 @@
+name: Deploy (minimal)
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ vars.SVC }}-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, proxmox]
+
+    # 레포 Variables → 런타임 env로 주입
+    env:
+      CTID:    ${{ vars.CTID }}
+      SVC:     ${{ vars.SVC }}
+      APP_DIR: ${{ vars.APP_DIR }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify inputs (fail fast)
+        run: |
+          : "${CTID:?CTID is empty}"
+          : "${SVC:?SVC is empty}"
+          : "${APP_DIR:?APP_DIR is empty}"
+
+      - name: Pack (no .git)
+        run: tar --exclude=".git" -czf "/tmp/${SVC}.tar.gz" .
+
+      - name: Push artifact to CT
+        run: sudo /usr/sbin/pct push "$CTID" "/tmp/${SVC}.tar.gz" "/tmp/${SVC}.tar.gz"
+
+      - name: Deploy inside CT & restart
+        run: |
+          sudo /usr/sbin/pct exec "$CTID" -- bash -lc "
+            set -e
+            SVC='${SVC}'
+            APP_DIR='${APP_DIR}'
+            TAR=\"/tmp/${SVC}.tar.gz\"
+
+            install -d \"\$APP_DIR\"
+            rm -rf \"\${APP_DIR}.deploy_old\" && mv \"\$APP_DIR\" \"\${APP_DIR}.deploy_old\" || true
+            mkdir -p \"\$APP_DIR\"
+            tar -C \"\$APP_DIR\" -xzf \"\$TAR\" && rm -f \"\$TAR\"
+
+            if [ -f \"\$APP_DIR/requirements.txt\" ]; then
+              python3 -m venv \"\$APP_DIR/.venv\" || true
+              \"\$APP_DIR/.venv/bin/pip\" -q install --upgrade pip
+              \"\$APP_DIR/.venv/bin/pip\" -q install -r \"\$APP_DIR/requirements.txt\"
+            fi
+
+            systemctl daemon-reload
+            systemctl restart \"\${SVC}.service\"
+          "
