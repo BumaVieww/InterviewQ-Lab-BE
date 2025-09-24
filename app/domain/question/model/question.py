@@ -14,5 +14,5 @@ class Question(Base):
     registrant_id = Column(Integer, ForeignKey("user.user_id"), nullable=False)
     question = Column(Text, nullable=False)
     category = Column(String(100))
-    tag = Column(Enum(QuestionTag), nullable=False)
+    tag = Column(Enum(QuestionTag, native_enum=False), nullable=False)
     question_at = Column(Date, nullable=False)
