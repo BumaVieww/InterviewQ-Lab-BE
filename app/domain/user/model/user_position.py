@@ -1,15 +1,8 @@
-from sqlalchemy import Column, Integer, DateTime, ForeignKey
-from sqlalchemy.sql import func
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, ForeignKey
 from core.database import Base
 
 class UserPosition(Base):
-    __tablename__ = "user_positions"
+    __tablename__ = "user_position"
 
-    user_position_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
-    position_id = Column(Integer, ForeignKey("positions.position_id"), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-
-    user = relationship("User", back_populates="user_positions")
-    position = relationship("Position", back_populates="user_positions")
+    user_id = Column(Integer, ForeignKey("user.user_id"), nullable=False, primary_key=True)
+    position_id = Column(Integer, ForeignKey("position.position_id"), nullable=False, primary_key=True)

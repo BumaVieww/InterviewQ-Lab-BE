@@ -1,3 +1,4 @@
+import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.routers import users, questions, answers, companies
@@ -6,9 +7,8 @@ app = FastAPI(title="면기연 API", description="면접 기업 연구 플랫폼
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["*"],
     allow_methods=["*"],
-    allow_credentials=True,
     allow_headers=["*"],
 )
 
@@ -24,3 +24,6 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)

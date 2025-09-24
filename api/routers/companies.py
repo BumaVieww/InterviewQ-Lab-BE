@@ -13,9 +13,15 @@ router = APIRouter(prefix="/companies", tags=["companies"])
 async def get_companies(
     cursor_id: Optional[int] = None,
     size: int = 20,
+    name: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    query = db.query(Company).order_by(Company.company_id)
+    query = db.query(Company)
+
+    if name:
+        query = query.filter(Company.company_name.ilike(f"%{name}%"))
+
+    query = query.order_by(Company.company_id)
     return paginate_cursor(query, cursor_id, size, Company.company_id)
 
 @router.get("/{company_id}", response_model=CompanyResponse)

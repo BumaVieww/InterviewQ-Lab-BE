@@ -4,10 +4,8 @@ from datetime import datetime
 class AnswerResponse(BaseModel):
     answer_id: int
     question_id: int
-    respondent_id: int
+    user_id: int
     answer: str
-    created_at: datetime
-    updated_at: datetime
 
     class Config:
         from_attributes = True
@@ -19,12 +17,10 @@ class AnswerUpdateRequest(BaseModel):
     answer: str
 
 class AnswerCommentResponse(BaseModel):
-    comment_id: int
+    answer_comment_id: int
     answer_id: int
-    commenter_id: int
+    user_id: int
     comment: str
-    created_at: datetime
-    updated_at: datetime
 
     class Config:
         from_attributes = True
