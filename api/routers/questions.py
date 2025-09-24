@@ -34,6 +34,36 @@ def normalize_company_name(company_name: str) -> str:
 
     return normalized.strip()
 
+@router.post("/single", response_model=BaseResponse)
+async def create_question(
+    question_request: QuestionCreateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    질문을 단건 등록합니다.
+    """
+    # 회사 존재 확인
+    company = db.query(Company).filter(Company.company_id == question_request.company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    # 질문 생성
+    question = Question(
+        registrant_id=current_user.user_id,
+        company_id=question_request.company_id,
+        question=question_request.question,
+        category=question_request.category,
+        tag=question_request.tag,
+        question_at=date.today()
+    )
+
+    db.add(question)
+    db.commit()
+    db.refresh(question)
+
+    return BaseResponse(message="질문 등록 성공", data=None)
+
 @router.post("/", response_model=BaseResponse)
 async def create_questions_from_csv(
     question: UploadFile = File(...),

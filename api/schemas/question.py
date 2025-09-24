@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional
 from datetime import date
+from app.domain.question.model.question import QuestionTag
 
 class QuestionResponse(BaseModel):
     question_id: int
@@ -18,9 +19,9 @@ class QuestionCreateRequest(BaseModel):
     question: str
     category: str
     company_id: int
-    tag: str
+    tag: QuestionTag
 
 class QuestionUpdateRequest(BaseModel):
     question: str
     category: str
-    tag: str
+    tag: QuestionTag
