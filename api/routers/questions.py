@@ -64,6 +64,30 @@ async def create_question(
 
     return BaseResponse(message="질문 등록 성공", data=None)
 
+@router.get("/sample-csv")
+async def download_sample_csv():
+    """
+    질문 업로드를 위한 샘플 CSV 파일을 다운로드합니다.
+    """
+    from fastapi.responses import StreamingResponse
+    
+    # CSV 샘플 데이터
+    sample_data = """company,question,category,question_at
+삼성전자,자기소개를 해주세요.,인성면접,2024
+네이버,프로젝트 경험을 말해주세요.,기술면접,2024
+카카오,지원동기가 무엇인가요?,인성면접,2023"""
+    
+    # CSV 파일로 변환
+    csv_bytes = sample_data.encode('utf-8-sig')  # BOM 추가로 엑셀에서 한글 깨짐 방지
+    
+    return StreamingResponse(
+        io.BytesIO(csv_bytes),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": "attachment; filename=question_upload_sample.csv"
+        }
+    )
+
 @router.post("/", response_model=BaseResponse)
 async def create_questions_from_csv(
     question: UploadFile = File(...),
@@ -136,9 +160,33 @@ async def create_questions_from_csv(
 async def get_questions(
     cursor_id: Optional[int] = None,
     size: int = 20,
+    search: Optional[str] = None,
+    company_name: Optional[str] = None,
+    question_at: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    query = db.query(Question).order_by(Question.question_id)
+    """
+    질문 목록을 조회합니다.
+    
+    - search: 질문 내용 전체 검색 (LIKE 검색)
+    - company_name: 회사명으로 필터링 (부분 검색)
+    - question_at: 학년도로 필터링 (예: 2024)
+    """
+    query = db.query(Question)
+    
+    # 전체 검색 - 질문 내용에서 검색
+    if search:
+        query = query.filter(Question.question.ilike(f"%{search}%"))
+    
+    # 회사명 필터 (부분 검색)
+    if company_name:
+        query = query.join(Company).filter(Company.company_name.ilike(f"%{company_name}%"))
+    
+    # 학년도 필터
+    if question_at:
+        query = query.filter(Question.question_at == question_at)
+    
+    query = query.order_by(Question.question_id)
     return paginate_cursor(query, cursor_id, size, Question.question_id)
 
 @router.get("/{question_id}", response_model=QuestionResponse)
