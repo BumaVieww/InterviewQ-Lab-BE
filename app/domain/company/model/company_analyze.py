@@ -8,4 +8,4 @@ class CompanyAnalyze(Base):
     company_id = Column(Integer, ForeignKey("company.company_id"), nullable=False)
     result = Column(Text)
     analyzed_at = Column(DateTime)
-    from_text = Column(Text)
+    from_field = Column("from", Text)

@@ -7,6 +7,7 @@ from api.schemas.base import BaseResponse, CursorPage
 from app.domain.company.model.company import Company
 from app.domain.company.model.position import Position
 from app.domain.company.model.company_job_posting import CompanyJobPosting
+from app.domain.company.model.company_analyze import CompanyAnalyze
 from typing import Optional
 
 router = APIRouter(prefix="/companies", tags=["companies"])
@@ -26,42 +27,34 @@ async def get_companies(
     query = query.order_by(Company.company_id)
     return paginate_cursor(query, cursor_id, size, Company.company_id)
 
-@router.get("/{company_id}", response_model=CompanyResponse)
-async def get_company(company_id: int, db: Session = Depends(get_db)):
-    company = db.query(Company).filter(Company.company_id == company_id).first()
-    if not company:
-        raise HTTPException(status_code=404, detail="Company not found")
-    return company
+@router.get("/analyze", response_model=CursorPage[CompanyAnalyzeResponse])
+async def get_company_analyses(
+    cursor_id: Optional[int] = None,
+    size: int = 20,
+    db: Session = Depends(get_db)
+):
+    """
+    회사 분석(Company Analyze) 목록을 조회합니다.
+    
+    - cursor_id: 커서 기반 페이지네이션을 위한 마지막 company_analyze_id
+    - size: 페이지 크기 (기본값: 20)
+    """
+    query = db.query(CompanyAnalyze).order_by(CompanyAnalyze.company_analyze_id)
+    return paginate_cursor(query, cursor_id, size, CompanyAnalyze.company_analyze_id)
 
-@router.delete("/{company_id}", response_model=BaseResponse)
-async def delete_company(company_id: int, db: Session = Depends(get_db)):
-    company = db.query(Company).filter(Company.company_id == company_id).first()
-    if not company:
-        raise HTTPException(status_code=404, detail="Company not found")
-
-    db.delete(company)
-    db.commit()
-    return BaseResponse(message="Company deleted successfully", data=None)
-
-@router.get("/analyze/{company_id}", response_model=CompanyAnalyzeResponse)
-async def get_company_analysis(company_id: int, db: Session = Depends(get_db)):
-    company = db.query(Company).filter(Company.company_id == company_id).first()
-    if not company:
-        raise HTTPException(status_code=404, detail="Company not found")
-
-    # TODO: Implement actual company analysis logic
-    analysis_data = {
-        "total_questions": 0,
-        "popular_categories": [],
-        "trending_tags": [],
-        "analysis_summary": "Company analysis not yet implemented"
-    }
-
-    return CompanyAnalyzeResponse(
-        company_id=company_id,
-        analysis_data=analysis_data
-    )
-
+@router.get("/analyze/{analyze_id}", response_model=CompanyAnalyzeResponse)
+async def get_company_analyze(analyze_id: int, db: Session = Depends(get_db)):
+    """
+    특정 회사 분석(Company Analyze)을 단건 조회합니다.
+    
+    - analyze_id: 분석 ID (company_analyze_id)
+    """
+    analyze = db.query(CompanyAnalyze).filter(
+        CompanyAnalyze.company_analyze_id == analyze_id
+    ).first()
+    if not analyze:
+        raise HTTPException(status_code=404, detail="Company analyze not found")
+    return analyze
 
 @router.get("/job-postings", response_model=CursorPage[JobPostingResponse])
 async def get_job_postings(
@@ -109,3 +102,45 @@ async def get_job_posting(job_posting_id: int, db: Session = Depends(get_db)):
     if not job_posting:
         raise HTTPException(status_code=404, detail="Job posting not found")
     return job_posting
+
+@router.get("/{company_id}", response_model=CompanyResponse)
+async def get_company(company_id: int, db: Session = Depends(get_db)):
+    company = db.query(Company).filter(Company.company_id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    return company
+
+@router.delete("/{company_id}", response_model=BaseResponse)
+async def delete_company(company_id: int, db: Session = Depends(get_db)):
+    company = db.query(Company).filter(Company.company_id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    db.delete(company)
+    db.commit()
+    return BaseResponse(message="Company deleted successfully", data=None)
+
+@router.get("/{company_id}/analyze", response_model=CursorPage[CompanyAnalyzeResponse])
+async def get_company_analyses_by_company(
+    company_id: int,
+    cursor_id: Optional[int] = None,
+    size: int = 20,
+    db: Session = Depends(get_db)
+):
+    """
+    특정 회사의 분석(Company Analyze) 목록을 조회합니다.
+    
+    - company_id: 회사 ID
+    - cursor_id: 커서 기반 페이지네이션을 위한 마지막 company_analyze_id
+    - size: 페이지 크기 (기본값: 20)
+    """
+    # 회사 존재 확인
+    company = db.query(Company).filter(Company.company_id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    query = db.query(CompanyAnalyze).filter(
+        CompanyAnalyze.company_id == company_id
+    ).order_by(CompanyAnalyze.company_analyze_id)
+    
+    return paginate_cursor(query, cursor_id, size, CompanyAnalyze.company_analyze_id)

@@ -15,9 +15,12 @@ class PositionResponse(BaseModel):
         from_attributes = True
 
 class CompanyAnalyzeResponse(BaseModel):
+    company_analyze_id: int
     company_id: int
-    analysis_data: dict
-
+    result: str | None
+    from_field: str | None
+    analyzed_at: str | None  # datetime을 str로 직렬화
+    
     class Config:
         from_attributes = True
 
