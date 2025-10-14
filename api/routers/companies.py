@@ -12,7 +12,7 @@ from typing import Optional
 
 router = APIRouter(prefix="/companies", tags=["companies"])
 
-@router.get("/", response_model=CursorPage[CompanyResponse])
+@router.get("", response_model=CursorPage[CompanyResponse])
 async def get_companies(
     cursor_id: Optional[int] = None,
     size: int = 20,
@@ -27,7 +27,7 @@ async def get_companies(
     query = query.order_by(Company.company_id)
     return paginate_cursor(query, cursor_id, size, Company.company_id)
 
-@router.post("/", response_model=BaseResponse)
+@router.post("", response_model=BaseResponse)
 async def create_company(
     company_request: CompanyCreateRequest,
     db: Session = Depends(get_db)
