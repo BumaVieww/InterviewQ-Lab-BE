@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from datetime import date, datetime
 
 class CompanyCreateRequest(BaseModel):
     company_name: str
@@ -22,7 +23,7 @@ class CompanyAnalyzeResponse(BaseModel):
     company_id: int
     result: str | None
     from_field: str | None
-    analyzed_at: str | None  # datetime을 str로 직렬화
+    analyzed_at: datetime | None
     
     class Config:
         from_attributes = True
@@ -37,7 +38,7 @@ class JobPostingResponse(BaseModel):
     benefits_and_perks: str | None
     hiring_process: str | None
     employment_type: str | None
-    application_deadline: str | None  # date를 str로 직렬화
+    application_deadline: date | None
     work_location: str | None
     
     class Config:

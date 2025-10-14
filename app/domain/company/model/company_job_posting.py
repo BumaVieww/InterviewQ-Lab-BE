@@ -1,6 +1,10 @@
 from sqlalchemy import Column, BigInteger, String, Date, Text, ForeignKey
 from sqlalchemy.orm import relationship
 from core.database import Base
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .company import Company
 
 class CompanyJobPosting(Base):
     __tablename__ = "company_job_posting"
@@ -18,4 +22,4 @@ class CompanyJobPosting(Base):
     work_location = Column(String(255), nullable=True)
 
     # Relationship
-    company = relationship("Company", backref="job_postings")
+    company = relationship("app.domain.company.model.company.Company", backref="job_postings")
