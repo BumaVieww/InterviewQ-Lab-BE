@@ -88,7 +88,7 @@ async def download_sample_csv():
         }
     )
 
-@router.post("/", response_model=BaseResponse)
+@router.post("", response_model=BaseResponse)
 async def create_questions_from_csv(
     question: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
@@ -156,7 +156,7 @@ async def create_questions_from_csv(
         db.rollback()
         raise HTTPException(status_code=400, detail=f"CSV processing failed: {str(e)}")
 
-@router.get("/", response_model=CursorPage[QuestionResponse])
+@router.get("", response_model=CursorPage[QuestionResponse])
 async def get_questions(
     cursor_id: Optional[int] = None,
     size: int = 20,
