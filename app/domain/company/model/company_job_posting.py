@@ -21,5 +21,6 @@ class CompanyJobPosting(Base):
     application_deadline = Column(Date, nullable=True)
     work_location = Column(String(255), nullable=True)
 
-    # Relationship
-    company = relationship("app.domain.company.model.company.Company", backref="job_postings")
+    # Relationships
+    company = relationship("Company", backref="job_postings")
+    tech_stacks = relationship("TechStack", backref="job_posting")

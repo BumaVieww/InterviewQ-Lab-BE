@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from datetime import date, datetime
+from typing import List
 
 class CompanyCreateRequest(BaseModel):
     company_name: str
@@ -28,6 +29,13 @@ class CompanyAnalyzeResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class TechStackResponse(BaseModel):
+    tech_stack_id: int
+    tech_name: str | None
+    
+    class Config:
+        from_attributes = True
+
 class JobPostingResponse(BaseModel):
     company_job_posting_id: int
     company_id: int | None
@@ -40,6 +48,7 @@ class JobPostingResponse(BaseModel):
     employment_type: str | None
     application_deadline: date | None
     work_location: str | None
+    tech_stacks: List[TechStackResponse] = []
     
     class Config:
         from_attributes = True
