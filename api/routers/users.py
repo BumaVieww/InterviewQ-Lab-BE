@@ -16,15 +16,18 @@ from typing import Optional
 router = APIRouter(prefix="/users", tags=["users"])
 
 @router.get("", response_model=UserResponse)
+@router.get("/", response_model=UserResponse)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
     return current_user
 
 @router.post("", response_model=BaseResponse)
+@router.post("/", response_model=BaseResponse)
 async def create_user(user_request: UserCreateRequest, current_user: User = Depends(get_current_user)):
     # 이미 get_current_user에서 사용자가 생성되므로 여기서는 업데이트만 수행
     return BaseResponse(message="User already exists or created", data=current_user.user_id)
 
 @router.patch("", response_model=BaseResponse)
+@router.patch("/", response_model=BaseResponse)
 async def update_user(
     user_request: UserUpdateRequest,
     current_user: User = Depends(get_current_user),
