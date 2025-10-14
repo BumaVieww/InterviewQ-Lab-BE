@@ -1,5 +1,8 @@
 from pydantic import BaseModel
 
+class CompanyCreateRequest(BaseModel):
+    company_name: str
+
 class CompanyResponse(BaseModel):
     company_id: int
     company_name: str

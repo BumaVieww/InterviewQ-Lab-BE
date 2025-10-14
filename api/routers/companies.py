@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from core.database import get_db
 from core.pagination import paginate_cursor
-from api.schemas.company import CompanyResponse, CompanyAnalyzeResponse, PositionResponse, JobPostingResponse
+from api.schemas.company import CompanyCreateRequest, CompanyResponse, CompanyAnalyzeResponse, PositionResponse, JobPostingResponse
 from api.schemas.base import BaseResponse, CursorPage
 from app.domain.company.model.company import Company
 from app.domain.company.model.position import Position
@@ -26,6 +26,30 @@ async def get_companies(
 
     query = query.order_by(Company.company_id)
     return paginate_cursor(query, cursor_id, size, Company.company_id)
+
+@router.post("/", response_model=BaseResponse)
+async def create_company(
+    company_request: CompanyCreateRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    회사를 생성합니다.
+    """
+    # 중복 회사명 검사
+    existing_company = db.query(Company).filter(
+        Company.company_name == company_request.company_name
+    ).first()
+
+    if existing_company:
+        raise HTTPException(status_code=400, detail="Company with this name already exists")
+
+    # 회사 생성
+    company = Company(company_name=company_request.company_name)
+    db.add(company)
+    db.commit()
+    db.refresh(company)
+
+    return BaseResponse(message="Company created successfully", data=company.company_id)
 
 @router.get("/analyze", response_model=CursorPage[CompanyAnalyzeResponse])
 async def get_company_analyses(
