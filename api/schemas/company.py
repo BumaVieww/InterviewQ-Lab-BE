@@ -20,3 +20,19 @@ class CompanyAnalyzeResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class JobPostingResponse(BaseModel):
+    company_job_posting_id: int
+    company_id: int | None
+    job_id: str | None
+    overview: str | None
+    key_responsibilities: str | None
+    preferred_qualifications: str | None
+    benefits_and_perks: str | None
+    hiring_process: str | None
+    employment_type: str | None
+    application_deadline: str | None  # date를 str로 직렬화
+    work_location: str | None
+    
+    class Config:
+        from_attributes = True
