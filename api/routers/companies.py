@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from core.database import get_db
 from core.pagination import paginate_cursor
 from api.schemas.company import CompanyCreateRequest, CompanyResponse, CompanyAnalyzeResponse, PositionResponse, JobPostingResponse
@@ -8,6 +8,7 @@ from app.domain.company.model.company import Company
 from app.domain.company.model.position import Position
 from app.domain.company.model.company_job_posting import CompanyJobPosting
 from app.domain.company.model.company_analyze import CompanyAnalyze
+from app.domain.company.model.tech_stack import TechStack
 from typing import Optional
 
 router = APIRouter(prefix="/companies", tags=["companies"])
@@ -100,7 +101,7 @@ async def get_job_postings(
     - employment_type: 고용 형태로 필터링
     - work_location: 근무 지역으로 필터링
     """
-    query = db.query(CompanyJobPosting)
+    query = db.query(CompanyJobPosting).options(selectinload(CompanyJobPosting.tech_stacks))
 
     # 회사명으로 필터링 (조인 필요)
     if company_name:
@@ -122,7 +123,9 @@ async def get_job_posting(job_posting_id: int, db: Session = Depends(get_db)):
     """
     특정 채용공고(Job Posting)를 조회합니다.
     """
-    job_posting = db.query(CompanyJobPosting).filter(
+    job_posting = db.query(CompanyJobPosting).options(
+        selectinload(CompanyJobPosting.tech_stacks)
+    ).filter(
         CompanyJobPosting.company_job_posting_id == job_posting_id
     ).first()
     if not job_posting:
