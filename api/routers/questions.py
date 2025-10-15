@@ -24,7 +24,7 @@ def normalize_company_name(company_name: str) -> str:
     normalized = company_name.strip()
 
     # 주식회사, (주), 회사 등 불필요한 접미사 제거
-    suffixes = ['주식회사', '(주)', '㈜', '회사', 'Inc', 'inc', 'Corp', 'corp', 'Co.', 'co.', 'Ltd', 'ltd']
+    suffixes = ['주식회사', '(주)', '㈜', '회사', 'Inc', 'inc', 'Corp', 'corp', 'Co.', 'co.', 'Ltd', 'ltd', '(최종면접)', '(기술면접)', '(2차면접)', '(비대면면접)', 'ai 면접', '(컬쳐핏)', ]
     for suffix in suffixes:
         if normalized.endswith(suffix):
             normalized = normalized[:-len(suffix)].strip()
