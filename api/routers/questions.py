@@ -116,8 +116,8 @@ async def create_questions_from_csv(
     try:
         # CSV 파일 읽기 (한글 지원)
         content = await question.read()
-        # UTF-8 BOM, UTF-8, CP949(한글 Windows) 순으로 시도
-        for encoding in ['utf-8-sig', 'utf-8', 'cp949', 'euc-kr']:
+        # 한글 인코딩(CP949, EUC-KR) 우선 시도
+        for encoding in ['cp949', 'euc-kr', 'utf-8-sig', 'utf-8']:
             try:
                 csv_content = content.decode(encoding)
                 break
