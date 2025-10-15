@@ -109,7 +109,7 @@ async def create_questions_from_csv(
         raise HTTPException(status_code=403, detail="Admin access required")
 
     # CSV 파일 검증
-    if not question.filename.endswith('.csv'):
+    if not question.filename.endswith('.csv') or not question.filename.endswith('.xlsx'):
         raise HTTPException(status_code=400, detail="CSV file required")
 
     try:
