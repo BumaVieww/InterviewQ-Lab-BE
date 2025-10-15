@@ -116,15 +116,15 @@ async def create_questions_from_csv(
     try:
         # CSV 파일 읽기 (한글 지원)
         content = await question.read()
-        # 한글 인코딩(CP949, EUC-KR) 우선 시도
-        for encoding in ['cp949', 'euc-kr', 'utf-8-sig', 'utf-8']:
+        # Windows Excel 한글 CSV 우선 지원
+        for encoding in ['cp949', 'euc-kr']:
             try:
                 csv_content = content.decode(encoding)
                 break
             except UnicodeDecodeError:
                 continue
         else:
-            raise HTTPException(status_code=400, detail="Unable to decode CSV file. Please use UTF-8 or CP949 encoding.")
+            raise HTTPException(status_code=400, detail="Unable to decode CSV file. Please use CP949 or EUC-KR encoding.")
         csv_reader = csv.DictReader(io.StringIO(csv_content))
 
         questions_to_insert = []
