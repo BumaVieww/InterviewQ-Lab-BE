@@ -55,7 +55,7 @@ async def create_question(
         question=question_request.question,
         category=question_request.category,
         tag=question_request.tag,
-        question_at=str(date.today().year)
+        question_at=date.today()
     )
 
     db.add(question)
