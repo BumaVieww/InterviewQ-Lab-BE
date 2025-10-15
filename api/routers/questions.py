@@ -55,7 +55,7 @@ async def create_question(
         question=question_request.question,
         category=question_request.category,
         tag=question_request.tag,
-        question_at=date.today()
+        question_at=date(date.today().year, 1, 1)  # 년도의 1월 1일로 저장
     )
 
     db.add(question)
@@ -143,7 +143,7 @@ async def create_questions_from_csv(
                 question=row['question'],
                 category=row['category'],
                 tag=tag,
-                question_at=row['question_at']
+                question_at=date(int(row['question_at']), 1, 1)  # 년도를 Date로 변환
             )
             questions_to_insert.append(question_obj)
 
@@ -186,7 +186,8 @@ async def get_questions(
     
     # 학년도 필터 (부분 검색)
     if question_at:
-        query = query.filter(Question.question_at.ilike(f"%{question_at}%"))
+        from sqlalchemy import cast, String
+        query = query.filter(cast(Question.question_at, String).ilike(f"%{question_at}%"))
     
     query = query.order_by(Question.question_id)
     return paginate_cursor(query, cursor_id, size, Question.question_id)
