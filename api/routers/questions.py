@@ -55,7 +55,7 @@ async def create_question(
         question=question_request.question,
         category=question_request.category,
         tag=question_request.tag,
-        question_at=date.today()
+        question_at=str(date.today().year)
     )
 
     db.add(question)
@@ -184,9 +184,9 @@ async def get_questions(
     if company_name:
         query = query.join(Company).filter(Company.company_name.ilike(f"%{company_name}%"))
     
-    # 학년도 필터
+    # 학년도 필터 (부분 검색)
     if question_at:
-        query = query.filter(Question.question_at == question_at)
+        query = query.filter(Question.question_at.ilike(f"%{question_at}%"))
     
     query = query.order_by(Question.question_id)
     return paginate_cursor(query, cursor_id, size, Question.question_id)
