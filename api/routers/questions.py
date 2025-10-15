@@ -109,19 +109,38 @@ async def create_questions_from_csv(
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
 
-    # CSV 파일 검증
+    # 파일 형식 검증
     filename = question.filename.lower()
     if not filename.endswith('.csv') and not filename.endswith('.xlsx'):
-        raise HTTPException(status_code=400, detail="CSV file required")
+        raise HTTPException(status_code=400, detail="CSV or XLSX file required")
 
     try:
-        # CSV 파일 읽기 (한글 지원)
         content = await question.read()
-        encoding = from_bytes(content).best().encoding or "utf-8"
-        csv_content = content.decode(encoding, errors="replace")
-        csv_reader = csv.DictReader(io.StringIO(csv_content))
+        
+        # 파일 형식에 따라 처리
+        if filename.endswith('.xlsx'):
+            # XLSX 파일 처리
+            import openpyxl
+            workbook = openpyxl.load_workbook(io.BytesIO(content))
+            sheet = workbook.active
+            
+            # 헤더 추출 (첫 번째 행)
+            headers = [cell.value for cell in sheet[1]]
+            
+            # 데이터 행을 딕셔너리로 변환
+            rows = []
+            for row_cells in sheet.iter_rows(min_row=2, values_only=True):
+                row_dict = dict(zip(headers, row_cells))
+                rows.append(row_dict)
+        else:
+            # CSV 파일 읽기 (한글 지원)
+            encoding = from_bytes(content).best().encoding or "utf-8"
+            csv_content = content.decode(encoding, errors="replace")
+            csv_reader = csv.DictReader(io.StringIO(csv_content))
+            rows = list(csv_reader)
+        
         questions_to_insert = []
-        for row in csv_reader:
+        for row in rows:
             # 필수 필드 검증
             if not all(key in row for key in ['company', 'question', 'category', 'question_at']):
                 raise HTTPException(status_code=400, detail="CSV must contain: company, question, category, question_at")
