@@ -1,3 +1,4 @@
+from charset_normalizer import from_bytes
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session, selectinload
 from core.database import get_db
@@ -116,17 +117,9 @@ async def create_questions_from_csv(
     try:
         # CSV 파일 읽기 (한글 지원)
         content = await question.read()
-        # Windows Excel 한글 CSV 우선 지원
-        for encoding in ['cp949', 'euc-kr']:
-            try:
-                csv_content = content.decode(encoding)
-                break
-            except UnicodeDecodeError:
-                continue
-        else:
-            raise HTTPException(status_code=400, detail="Unable to decode CSV file. Please use CP949 or EUC-KR encoding.")
+        encoding = from_bytes(content).best().encoding or "utf-8"
+        csv_content = content.decode(encoding, errors="replace")
         csv_reader = csv.DictReader(io.StringIO(csv_content))
-
         questions_to_insert = []
         for row in csv_reader:
             # 필수 필드 검증
