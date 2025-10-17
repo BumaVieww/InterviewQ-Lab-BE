@@ -225,10 +225,13 @@ async def get_questions(
 
     # 우선순위 점수 계산
     # Goal Company 매칭: +2점
-    goal_company_score = case(
-        (Question.company_id.in_(user_goal_company_ids), 2) if user_goal_company_ids else (False, 0),
-        else_=0
-    )
+    if user_goal_company_ids:
+        goal_company_score = case(
+            (Question.company_id.in_(user_goal_company_ids), 2),
+            else_=0
+        )
+    else:
+        goal_company_score = 0
 
     # User Position 매칭: +1점
     if position_names:
@@ -251,9 +254,12 @@ async def get_questions(
     if search:
         query = query.filter(Question.question.ilike(f"%{search}%"))
 
-    # 회사명 필터 (부분 검색)
+    # 회사명 필터 (부분 검색) - left outer join으로 안전하게 처리
     if company_name:
-        query = query.join(Company).filter(Company.company_name.ilike(f"%{company_name}%"))
+        from sqlalchemy.orm import aliased
+        company_alias = aliased(Company)
+        query = query.outerjoin(company_alias, Question.company_id == company_alias.company_id)
+        query = query.filter(company_alias.company_name.ilike(f"%{company_name}%"))
 
     # 학년도 필터 (부분 검색)
     if question_at:
@@ -266,18 +272,22 @@ async def get_questions(
     # 우선순위 점수 내림차순 → question_id 내림차순 정렬
     query = query.order_by(priority_score.desc(), Question.question_id.desc())
 
-    # 커서 페이지네이션 적용
-    # NOTE: 우선순위 정렬과 커서 페이지네이션을 함께 사용할 때의 제한사항:
-    # - question_id < cursor_id 필터링은 우선순위가 다른 항목들 간 순서를 보장하지 않음
-    # - 완벽한 페이지네이션을 위해서는 모든 데이터를 메모리에 로드하거나
-    # - offset 기반 페이지네이션 사용, 또는 복합 커서 (priority, id) 사용 필요
-    # TODO: 데이터가 많아지면 offset 기반으로 변경 고려
-    if cursor_id is not None:
-        query = query.filter(Question.question_id < cursor_id)
+    # 전체 데이터 조회
+    all_results = query.all()
 
-    # size + 1개 가져와서 has_next 판단
-    questions_with_priority = query.limit(size + 1).all()
-    questions = [q[0] for q in questions_with_priority]
+    # 메모리에서 페이지네이션 처리
+    # (우선순위 정렬이 적용된 상태에서 안전하게 페이지네이션)
+    start_index = 0
+    if cursor_id is not None:
+        # cursor_id를 찾아서 그 다음부터 시작
+        for idx, (q, _) in enumerate(all_results):
+            if q.question_id == cursor_id:
+                start_index = idx + 1
+                break
+
+    # 페이지 슬라이싱
+    page_results = all_results[start_index:start_index + size + 1]
+    questions = [q[0] for q in page_results]
 
     # has_next 판단
     has_next = len(questions) > size
@@ -324,8 +334,9 @@ async def delete_question(
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
 
-    if question.registrant_id != current_user.user_id:
-        raise HTTPException(status_code=403, detail="Not authorized to delete this question")
+    if not current_user.role == "admin":
+        if question.registrant_id != current_user.user_id:
+            raise HTTPException(status_code=403, detail="Not authorized to delete this question")
 
     db.delete(question)
     db.commit()
