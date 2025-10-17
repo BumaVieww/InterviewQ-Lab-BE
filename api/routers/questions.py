@@ -1,6 +1,7 @@
 from charset_normalizer import from_bytes
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session, selectinload
+from sqlalchemy import case
 from core.database import get_db
 from core.auth import get_current_user
 from core.pagination import paginate_cursor
@@ -11,6 +12,9 @@ from app.domain.question.model.question import Question
 from app.domain.question.model.answer import Answer
 from app.domain.user.model.user import User
 from app.domain.company.model.company import Company
+from app.domain.user.model.user_position import UserPosition
+from app.domain.user.model.goal_company import GoalCompany
+from app.domain.company.model.position import Position
 from typing import Optional
 import csv
 import io
@@ -186,32 +190,101 @@ async def get_questions(
     search: Optional[str] = None,
     company_name: Optional[str] = None,
     question_at: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     질문 목록을 조회합니다.
-    
+
     - search: 질문 내용 전체 검색 (LIKE 검색)
     - company_name: 회사명으로 필터링 (부분 검색)
     - question_at: 학년도로 필터링 (예: 2024)
+
+    우선순위 정렬:
+    - Goal Company 매칭: +2점 (사용자가 등록한 목표 회사)
+    - User Position 매칭: +1점 (질문 category에 사용자의 직무명 포함)
+    - 점수 내림차순 → question_id 내림차순
     """
+
+    # 사용자의 goal_company 목록 조회 (list로 변환)
+    user_goal_company_ids = [
+        gc.company_id for gc in db.query(GoalCompany).filter(
+            GoalCompany.user_id == current_user.user_id
+        ).all()
+    ]
+
+    # 사용자의 position 이름 조회
+    user_positions = db.query(Position.position_name).join(
+        UserPosition, UserPosition.position_id == Position.position_id
+    ).filter(
+        UserPosition.user_id == current_user.user_id
+    ).all()
+
+    # position 이름 리스트 생성
+    position_names = [pos.position_name for pos in user_positions if pos.position_name]
+
+    # 우선순위 점수 계산
+    # Goal Company 매칭: +2점
+    goal_company_score = case(
+        (Question.company_id.in_(user_goal_company_ids), 2) if user_goal_company_ids else (False, 0),
+        else_=0
+    )
+
+    # User Position 매칭: +1점
+    if position_names:
+        # category에 position_name이 포함되어 있으면 점수 부여
+        conditions = [Question.category.ilike(f"%{name}%") for name in position_names]
+        position_score = case(
+            *[(condition, 1) for condition in conditions],
+            else_=0
+        )
+    else:
+        position_score = 0
+
+    # 총 우선순위 점수
+    priority_score = goal_company_score + position_score
+
+    # 쿼리 구성
     query = db.query(Question)
-    
+
     # 전체 검색 - 질문 내용에서 검색
     if search:
         query = query.filter(Question.question.ilike(f"%{search}%"))
-    
+
     # 회사명 필터 (부분 검색)
     if company_name:
         query = query.join(Company).filter(Company.company_name.ilike(f"%{company_name}%"))
-    
+
     # 학년도 필터 (부분 검색)
     if question_at:
         from sqlalchemy import cast, String
         query = query.filter(cast(Question.question_at, String).ilike(f"%{question_at}%"))
-    
-    query = query.order_by(Question.question_id)
-    return paginate_cursor(query, cursor_id, size, Question.question_id)
+
+    # 우선순위 점수를 추가하여 조회
+    query = query.add_columns(priority_score.label('priority'))
+
+    # 우선순위 점수 내림차순 → question_id 내림차순 정렬
+    query = query.order_by(priority_score.desc(), Question.question_id.desc())
+
+    # 커서 페이지네이션 적용
+    # NOTE: 우선순위 정렬과 커서 페이지네이션을 함께 사용할 때의 제한사항:
+    # - question_id < cursor_id 필터링은 우선순위가 다른 항목들 간 순서를 보장하지 않음
+    # - 완벽한 페이지네이션을 위해서는 모든 데이터를 메모리에 로드하거나
+    # - offset 기반 페이지네이션 사용, 또는 복합 커서 (priority, id) 사용 필요
+    # TODO: 데이터가 많아지면 offset 기반으로 변경 고려
+    if cursor_id is not None:
+        query = query.filter(Question.question_id < cursor_id)
+
+    # size + 1개 가져와서 has_next 판단
+    questions_with_priority = query.limit(size + 1).all()
+    questions = [q[0] for q in questions_with_priority]
+
+    # has_next 판단
+    has_next = len(questions) > size
+    values = questions[:size]
+
+    # CursorPage 응답 생성
+    return CursorPage(values=values, has_next=has_next)
 
 @router.get("/{question_id}", response_model=QuestionResponse)
 async def get_question(question_id: int, db: Session = Depends(get_db)):
