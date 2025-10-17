@@ -231,8 +231,9 @@ async def update_question(
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
 
-    if question.registrant_id != current_user.user_id:
-        raise HTTPException(status_code=403, detail="Not authorized to update this question")
+    if not current_user.role == "admin":
+        if question.registrant_id != current_user.user_id:
+            raise HTTPException(status_code=403, detail="Not authorized to update this question")
 
     question.question = question_request.question
     question.category = question_request.category
